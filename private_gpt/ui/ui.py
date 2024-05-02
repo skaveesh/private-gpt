@@ -9,7 +9,7 @@ from typing import Any
 
 import gradio as gr  # type: ignore
 from fastapi import FastAPI
-from gradio.themes.utils.colors import slate  # type: ignore
+from gradio.themes.utils.colors import orange  # type: ignore
 from injector import inject, singleton
 from llama_index.core.llms import ChatMessage, ChatResponse, MessageRole
 from pydantic import BaseModel
@@ -29,12 +29,18 @@ THIS_DIRECTORY_RELATIVE = Path(__file__).parent.relative_to(PROJECT_ROOT_PATH)
 # Should be "private_gpt/ui/avatar-bot.ico"
 AVATAR_BOT = THIS_DIRECTORY_RELATIVE / "avatar-bot.ico"
 
-UI_TAB_TITLE = "My Private GPT"
+UI_TAB_TITLE = "ALM GPT"
 
 SOURCES_SEPARATOR = "\n\n Sources: \n"
 
 MODES = ["Query Files", "Search Files", "LLM Chat (no context from files)"]
 
+js = """
+function createGradioAnimation() {
+    document.body.className = document.body.className.replace("dark","");
+    return 'created';
+}
+"""
 
 class Source(BaseModel):
     file: str
@@ -300,34 +306,42 @@ class PrivateGptUi:
         logger.debug("Creating the UI blocks")
         with gr.Blocks(
             title=UI_TAB_TITLE,
-            theme=gr.themes.Soft(primary_hue=slate),
+            theme=gr.themes.Default(primary_hue=orange),
+            js=js,
             css=".logo { "
             "display:flex;"
-            "background-color: #C7BAFF;"
+            "background-color: white;"
             "height: 80px;"
             "border-radius: 8px;"
             "align-content: center;"
             "justify-content: center;"
             "align-items: center;"
             "}"
-            ".logo img { height: 25% }"
+            ".logo img { height: 80% }"
             ".contain { display: flex !important; flex-direction: column !important; }"
             "#component-0, #component-3, #component-10, #component-8  { height: 100% !important; }"
             "#chatbot { flex-grow: 1 !important; overflow: auto !important;}"
-            "#col { height: calc(100vh - 112px - 16px) !important; }",
+            "#col { height: calc(100vh - 112px - 16px) !important; }"
+            "footer{display:none !important}",
         ) as blocks:
+            def toggle_sidebar(state):
+                state = not state
+                return gr.update(visible=state), state
+
             with gr.Row():
                 gr.HTML(f"<div class='logo'/><img src={logo_svg} alt=PrivateGPT></div")
 
             with gr.Row(equal_height=False):
-                with gr.Column(scale=3):
+                with gr.Column(visible=False) as sidebar_left:
+
                     mode = gr.Radio(
                         MODES,
                         label="Mode",
                         value="Query Files",
+                        visible=False,
                     )
                     upload_button = gr.components.UploadButton(
-                        "Upload File(s)",
+                        "📤 Upload File(s)",
                         type="filepath",
                         file_count="multiple",
                         size="sm",
@@ -336,7 +350,7 @@ class PrivateGptUi:
                         self._list_ingested_files,
                         headers=["File name"],
                         label="Ingested Files",
-                        height=235,
+                        height=800,
                         interactive=False,
                         render=False,  # Rendered under the button
                     )
@@ -452,8 +466,7 @@ class PrivateGptUi:
 
                         return model_mapping[llm_mode]
 
-                with gr.Column(scale=7, elem_id="col"):
-                    # Determine the model label based on the value of PGPT_PROFILES
+                with gr.Column(scale=10, elem_id="col"):
                     model_label = get_model_label()
                     if model_label is not None:
                         label_text = (
@@ -464,6 +477,7 @@ class PrivateGptUi:
 
                     _ = gr.ChatInterface(
                         self._chat,
+                        submit_btn="Ask 🤖️",
                         chatbot=gr.Chatbot(
                             label=label_text,
                             show_copy_button=True,
@@ -474,8 +488,17 @@ class PrivateGptUi:
                                 AVATAR_BOT,
                             ),
                         ),
+                        #additional_inputs=[mode, upload_button],
                         additional_inputs=[mode, upload_button, system_prompt_input],
                     )
+
+                    with gr.Row(equal_height=True):
+                        with gr.Column(scale=1):
+                            sidebar_state = gr.State(False)
+                            btn_toggle_sidebar = gr.Button("⚙️ Settings")
+                            btn_toggle_sidebar.click(toggle_sidebar, [sidebar_state], [sidebar_left, sidebar_state])
+                        with gr.Column(scale=9):
+                            gr.Markdown("### See settings to upload docs to the ALM GPT")
         return blocks
 
     def get_ui_blocks(self) -> gr.Blocks:

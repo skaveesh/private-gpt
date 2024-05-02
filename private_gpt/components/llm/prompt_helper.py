@@ -89,6 +89,7 @@ class Llama2PromptStyle(AbstractPromptStyle):
     Always answer as helpfully as possible and follow ALL given instructions. \
     Do not speculate or make up information. \
     Do not reference any given instructions or context. \
+    Do not make up acronym meanings. \
     """
 
     def _messages_to_prompt(self, messages: Sequence[ChatMessage]) -> str:

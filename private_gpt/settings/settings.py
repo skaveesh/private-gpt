@@ -254,7 +254,7 @@ class OllamaSettings(BaseModel):
         description="Sets how strongly to penalize repetitions. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 0.9) will be more lenient. (Default: 1.1)",
     )
     request_timeout: float = Field(
-        120.0,
+        300.0,
         description="Time elapsed until ollama times out the request. Default is 120s. Format is float. ",
     )
 
